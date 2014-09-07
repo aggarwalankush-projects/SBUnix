@@ -70,7 +70,6 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
         cprintf("Stack backtrace:");
         while(rbp) {
                 rAddr = (uint64_t*)rbp;
-                //
                 cprintf ("\n rbp %016x rip %016x", rbp, rip);
                 if(debuginfo_rip(rip, &info) == 0){
                 cprintf("\n\t%s:%d: ", info.rip_file, info.rip_line);
