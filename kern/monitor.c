@@ -66,15 +66,15 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
         struct Ripdebuginfo info;
         uint64_t rbp,rip=0;
         uint64_t* rAddr;
-        rbp = read_rbp();
+        rbp = read_rbp();read_rip(rip);
         cprintf("Stack backtrace:");
         while(rbp) {
                 rAddr = (uint64_t*)rbp;
-                rip = *(rAddr + 1);
+                //
                 cprintf ("\n rbp %016x rip %016x", rbp, rip);
                 if(debuginfo_rip(rip, &info) == 0){
                 cprintf("\n\t%s:%d: ", info.rip_file, info.rip_line);
-                cprintf("%.*s+%016x", info.rip_fn_namelen, info.rip_fn_name, rip - info.rip_fn_addr);
+                cprintf("%.*s+%016x", info.rip_fn_namelen, info.rip_fn_name,rip-info.rip_fn_addr);
                 len=info.rip_fn_narg;
                 cprintf(" args:%d ",len);
                 for(i=1;i<=len;i++){
@@ -82,6 +82,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
                                    }
                 }
                 rbp = *rAddr;
+		rip = *(rAddr + 1);	
 
 }
 
