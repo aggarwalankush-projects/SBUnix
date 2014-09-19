@@ -208,20 +208,17 @@ static void *
         extern uintptr_t end_debug;
 		nextfree = ROUNDUP((char *) end_debug, PGSIZE);
 		result = nextfree;
-		nextfree+=n;
-	/*	 nextfree = ROUNDUP(nextfree, PGSIZE);
-result = nextfree;
-nextfree += n;
-return result;
-*/	}else{
+		nextfree+=n;	
+		}
+		else{
 		if(n==0){
 			 nextfree = ROUNDUP((char *) nextfree, PGSIZE);
- result=nextfree;
+ 				result=nextfree;
 		}	
 		else if(n>0){
 			 nextfree = ROUNDUP((char *) nextfree, PGSIZE);
-			result=nextfree;
-			nextfree+=n;
+			 result=nextfree;
+			 nextfree+=n;
 		}
 	}
 	return result; 
