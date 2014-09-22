@@ -59,6 +59,28 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
+	extern void t_divide(void);
+	extern void t_dblflt(void);
+	extern void t_tss(void);
+	extern void t_segnp(void);
+	void t_stack(void);
+	void t_gpflt(void);
+	extern void t_pgflt(void);
+	void t_debug(void);
+	void t_nmi(void);
+	void t_brkpt(void);
+	void t_oflow(void);
+	void t_bound(void);
+	void t_illop(void);
+	void t_device(void);
+	void t_syscall(void);
+	void t_align(void);
+	void t_mchk(void);
+	void t_simderr(void);
+	void t_fperr(void);
+	void i_timer(void);
+	void i_kbd(void);
+	void i_serial(void);
 
 void
 trap_init(void)
@@ -66,8 +88,31 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-    idt_pd.pd_lim = sizeof(idt)-1;
-    idt_pd.pd_base = (uint64_t)idt;
+	SETGATE(idt[T_DIVIDE], 0, GD_KT, t_divide, 0);
+	SETGATE(idt[T_DEBUG], 0, GD_KT, t_debug,0);
+	SETGATE(idt[T_NMI], 0, GD_KT, t_nmi,0);
+	SETGATE(idt[T_BRKPT], 0, GD_KT, t_brkpt,3);
+	SETGATE(idt[T_OFLOW], 0, GD_KT, t_oflow,0);
+	SETGATE(idt[T_BOUND], 0, GD_KT, t_bound,0);
+	SETGATE(idt[T_ILLOP], 0, GD_KT, t_illop,0);
+	SETGATE(idt[T_DEVICE], 0, GD_KT, t_device,0);
+	SETGATE(idt[T_DBLFLT], 0, GD_KT, t_dblflt,0);
+	SETGATE(idt[T_TSS], 0, GD_KT, t_tss,0);
+	SETGATE(idt[T_SEGNP], 0, GD_KT, t_segnp,0);
+	SETGATE(idt[T_STACK], 0, GD_KT, t_stack,0);
+	SETGATE(idt[T_GPFLT], 0, GD_KT, t_gpflt,0);
+	SETGATE(idt[T_PGFLT], 0, GD_KT, t_pgflt,0);
+	SETGATE(idt[T_FPERR], 0, GD_KT, t_fperr,0);
+	SETGATE(idt[T_ALIGN], 0, GD_KT, t_align,0);
+	SETGATE(idt[T_MCHK], 0, GD_KT, t_mchk,0);
+	SETGATE(idt[T_SIMDERR], 0, GD_KT, t_simderr,0);
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, t_syscall, 3);
+	SETGATE(idt[IRQ_TIMER + IRQ_OFFSET], 0, GD_KT, i_timer, 0);
+	SETGATE(idt[IRQ_KBD + IRQ_OFFSET], 0, GD_KT, i_kbd, 0);
+	SETGATE(idt[IRQ_SERIAL + IRQ_OFFSET], 0, GD_KT, i_serial, 0);
+	
+	idt_pd.pd_lim = sizeof(idt)-1;
+	idt_pd.pd_base = (uint64_t)idt;
 	// Per-CPU setup
 	trap_init_percpu();
 }

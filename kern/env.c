@@ -120,19 +120,20 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
-	
-	int i;
+	env_free_list=NULL;
+	uint64_t i;
 	for(i = 0; i<NENV; i++) {
 		envs[i].env_id = 0;
 		envs[i].env_status = ENV_FREE;
-		
+		if(i==0)
+			 env_free_list = &envs[i];		
+		else
+			 envs[i-1].env_link = &envs[i];
 		if (i == NENV - 1) 
 			envs[i].env_link = NULL;
-		else
-	               envs[i-1].env_link = &envs[i];
 	}
 	
-	env_free_list = &envs[0];
+	
 	
 	// Per-CPU part of the initialization
 	env_init_percpu();
@@ -201,10 +202,13 @@ env_setup_vm(struct Env *e)
 	// LAB 3: Your code here.
 	
 	e->env_pml4e = page2kva(p);
-	e->env_cr3 = PADDR(e->env_pml4e);
+	e->env_cr3 = page2pa(p);
 	memset(e->env_pml4e, 0, PGSIZE);
-	memmove(e->env_pml4e + PDX(UTOP), boot_pml4e + PDX(UTOP), PGSIZE);
 	p->pp_ref++;
+	
+	for(i=PML4(UTOP);i<NPDENTRIES;i++)
+	e->env_pml4e[i]=boot_pml4e[i];
+
 
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
@@ -363,33 +367,65 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  What?  (See env_run() and env_pop_tf() below.)
 
 	// LAB 3: Your code here
-
-	struct Elf *elfhdr = (struct Elf *) binary;
 	struct Proghdr *ph, *eph;
+	struct Elf *elfhdr = (struct Elf *)binary;
+	struct PageInfo *page;
+	int copy_size, copy_count;
+	uintptr_t page_offset;
+	void *copy_to, *copy_from;
 	if (elfhdr->e_magic != ELF_MAGIC)
-	panic("elf header's magic error\n");
+	panic("Bad ELF Format in kern/env.c/load_icode()!\n");
 	ph = (struct Proghdr *) ((uint8_t *) elfhdr + elfhdr->e_phoff);
 	eph = ph + elfhdr->e_phnum;
-	lcr3(e->env_cr3);
-	for ( ;ph < eph; ph++) {
-		if (ph->p_type != ELF_PROG_LOAD) 
-			continue;
-		if (ph->p_filesz > ph->p_memsz)
-			panic("file size is great than memory size\n");
-		region_alloc(e, (void *) ph->p_va, ph->p_memsz);
-		memmove((void *) ph->p_va, binary+ph->p_offset, ph->p_filesz);
-		memset((void *) ph->p_va + ph->p_filesz, 0, (ph->p_memsz - ph->p_filesz));
-	}	
+	for (; ph < eph; ph ++) {
+	if (ph->p_type == ELF_PROG_LOAD) {
+	region_alloc(e, (void *)ph->p_va, ph->p_memsz);
+	void *copy_ptr = binary + ph->p_offset;
+	for (copy_count = 0; copy_count < ph->p_filesz; ) {
+	if (NULL == (page = page_lookup(e->env_pml4e, (void *)(ph->p_va + copy_count), NULL))) {
+	panic("Page cannot be find\n");
+	}
+	page_offset = PGOFF(ph->p_va + copy_count);
+	copy_size = PGSIZE - page_offset;
+	if (copy_count + copy_size > ph->p_filesz) {
+	copy_size = ph->p_filesz - copy_count;
+	}
+	copy_from = copy_ptr + copy_count;
+	copy_to = page2kva(page) + page_offset;
+	memmove(copy_to, copy_from, copy_size);
+	copy_count += copy_size;
+	}
+	if (copy_count != ph->p_filesz)
+	panic("Unequal of copy_count and ph->p_filesz\n");
+	for ( ; copy_count < ph->p_memsz; ) {
+	if (NULL == (page = page_lookup(e->env_pml4e, (void *)(ph->p_va + copy_count), NULL))) {
+	panic("Page cannot be find\n");
+}
+// calculate copy_size and copy_to according to start add.
+// the first time the p_va maybe not at the beginning of a page
+// if p_va+copy_count is at the beginning of a page, copy_size is PGSIZE
+page_offset = PGOFF(ph->p_va + copy_count);
+copy_size = PGSIZE - page_offset;
+// fix copy_size and copy_to according to end add.
+// if the end is within this page
+if (copy_count + copy_size > ph->p_memsz) {
+copy_size = ph->p_memsz - copy_count;
+}
+copy_to = page2kva(page) + page_offset;
+memset(copy_to, 0, copy_size);
+copy_count += copy_size;
+}
+if (copy_count != ph->p_memsz)
+panic("Unequal of copy_count and ph->p_filesz\n");
+}
+}
+// Now map one page for the program's initial stack
+// at virtual address USTACKTOP - PGSIZE.
+// LAB 3: Your code here.
+region_alloc(e, (uintptr_t *)(USTACKTOP - PGSIZE), PGSIZE);
+// Set the program's entry point e->env_tf.tf_eip
+e->env_tf.tf_rip = elfhdr->e_entry;
 
-	e->env_tf.tf_rip = elfhdr->e_entry;		
-
-	// Now map one page for the program's initial stack
-	// at virtual address USTACKTOP - PGSIZE.
-
-	// LAB 3: Your code here.
-	region_alloc(e, (void *) USTACKTOP - PGSIZE, PGSIZE);
-	lcr3(boot_cr3);
-    e->elf = binary;
 }
 
 //
@@ -405,8 +441,9 @@ env_create(uint8_t *binary, enum EnvType type)
 	// LAB 3: Your code here.
 	struct Env *e;
 	if( env_alloc(&e, 0) < 0) return;
+	 e->env_type = type;
 	load_icode(e, binary);
-	e->env_type = type;
+
 
 }
 
@@ -547,8 +584,7 @@ env_run(struct Env *e)
 	curenv = e;
 	e->env_status = ENV_RUNNING;
 	e->env_runs++;
-	lcr3(PADDR(e->env_pml4e));
+	lcr3(e->env_cr3);
 	env_pop_tf(&(e->env_tf));
-	//panic("env_run not yet implemented");
 }
 
