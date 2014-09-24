@@ -367,64 +367,43 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  What?  (See env_run() and env_pop_tf() below.)
 
 	// LAB 3: Your code here
+
 	struct Proghdr *ph, *eph;
-	struct Elf *elfhdr = (struct Elf *)binary;
-	struct PageInfo *page;
-	int copy_size, copy_count;
-	uintptr_t page_offset;
-	void *copy_to, *copy_from;
-	if (elfhdr->e_magic != ELF_MAGIC)
-	panic("Bad ELF Format in kern/env.c/load_icode()!\n");
-	ph = (struct Proghdr *) ((uint8_t *) elfhdr + elfhdr->e_phoff);
+	struct Elf *elfhdr;
+	uint64_t remaining_memory, occupied_memory;
+	struct PageInfo *page_var;
+	
+	elfhdr = (struct Elf *)(binary);
+	if(elfhdr->e_magic != ELF_MAGIC)
+	{
+		panic("ELF_MAGIC error in load_icode\n");
+		return;
+	}
+	lcr3(e->env_cr3);
+	ph = (struct Proghdr *)((uint8_t *)elfhdr + elfhdr->e_phoff);
 	eph = ph + elfhdr->e_phnum;
-	for (; ph < eph; ph ++) {
-	if (ph->p_type == ELF_PROG_LOAD) {
-	region_alloc(e, (void *)ph->p_va, ph->p_memsz);
-	void *copy_ptr = binary + ph->p_offset;
-	for (copy_count = 0; copy_count < ph->p_filesz; ) {
-	if (NULL == (page = page_lookup(e->env_pml4e, (void *)(ph->p_va + copy_count), NULL))) {
-	panic("Page cannot be find\n");
+	for(; ph < eph; ph++)
+	{
+		if(ph->p_type == ELF_PROG_LOAD)
+		{
+			if(ph->p_filesz > ph->p_memsz)
+			{
+				panic(" Memory error from load_icode\n");
+				return;
+			}	
+			region_alloc(e, (void *)ph->p_va, ph->p_memsz);
+			memcpy((void *)ph->p_va, binary + ph->p_offset, ph->p_filesz);
+			occupied_memory = ph->p_va + ph->p_filesz;
+			remaining_memory = ph->p_memsz - ph->p_filesz;
+			memset((void *)occupied_memory, 0, remaining_memory);	
+		}
 	}
-	page_offset = PGOFF(ph->p_va + copy_count);
-	copy_size = PGSIZE - page_offset;
-	if (copy_count + copy_size > ph->p_filesz) {
-	copy_size = ph->p_filesz - copy_count;
-	}
-	copy_from = copy_ptr + copy_count;
-	copy_to = page2kva(page) + page_offset;
-	memmove(copy_to, copy_from, copy_size);
-	copy_count += copy_size;
-	}
-	if (copy_count != ph->p_filesz)
-	panic("Unequal of copy_count and ph->p_filesz\n");
-	for ( ; copy_count < ph->p_memsz; ) {
-	if (NULL == (page = page_lookup(e->env_pml4e, (void *)(ph->p_va + copy_count), NULL))) {
-	panic("Page cannot be find\n");
-}
-// calculate copy_size and copy_to according to start add.
-// the first time the p_va maybe not at the beginning of a page
-// if p_va+copy_count is at the beginning of a page, copy_size is PGSIZE
-page_offset = PGOFF(ph->p_va + copy_count);
-copy_size = PGSIZE - page_offset;
-// fix copy_size and copy_to according to end add.
-// if the end is within this page
-if (copy_count + copy_size > ph->p_memsz) {
-copy_size = ph->p_memsz - copy_count;
-}
-copy_to = page2kva(page) + page_offset;
-memset(copy_to, 0, copy_size);
-copy_count += copy_size;
-}
-if (copy_count != ph->p_memsz)
-panic("Unequal of copy_count and ph->p_filesz\n");
-}
-}
-// Now map one page for the program's initial stack
-// at virtual address USTACKTOP - PGSIZE.
-// LAB 3: Your code here.
-region_alloc(e, (uintptr_t *)(USTACKTOP - PGSIZE), PGSIZE);
-// Set the program's entry point e->env_tf.tf_eip
-e->env_tf.tf_rip = elfhdr->e_entry;
+	lcr3(boot_cr3);
+	// Now map one page for the program's initial stack
+	// at virtual address USTACKTOP - PGSIZE.
+	// LAB 3: Your code here.
+	region_alloc(e, (uintptr_t *)(USTACKTOP - PGSIZE), PGSIZE);
+	e->env_tf.tf_rip = elfhdr->e_entry;
 
 }
 
