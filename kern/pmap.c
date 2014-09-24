@@ -763,10 +763,30 @@ static uintptr_t user_mem_check_addr;
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
+	uintptr_t i, temp;
+	pte_t *pte;
+	if((uint64_t)va >= ULIM)
+	{
+		user_mem_check_addr = (uintptr_t)va;
+		return -E_FAULT;
+	}	
+	for (i = (uintptr_t)va; i < ((uintptr_t)va + len);)
+	{
+		pte = pml4e_walk(env->env_pml4e, (const void *)i, 0);
+		if((!pte) || (!(*pte & perm)))
+		{
+			user_mem_check_addr = i;
+			return -E_FAULT;
+		}
+		temp = (uintptr_t)ROUNDUP(i, PGSIZE);
+		if(i!=temp)
+			i=temp;
+		else
+			i=i+PGSIZE;
+	}
+	
 	return 0;
-
 }
-
 //
 // Checks that environment 'env' is allowed to access the range
 // of memory [va, va+len) with permissions 'perm | PTE_U | PTE_P'.
