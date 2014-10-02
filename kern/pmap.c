@@ -319,7 +319,7 @@ x64_vm_init(void)
 	// Map all of physical memory at KERNBASE. We have detected the number
         // of physical pages to be npages.
 	// Ie.  the VA range [KERNBASE, npages*PGSIZE) should map to
-	//      the PA range [0, npages*PGSIZE - KERNBASE)
+	//      the PA range [0, npages*PGSIZE)
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
 	boot_map_region(pml4e,KERNBASE, npages*PGSIZE, 0, PTE_W|PTE_P);//lab 2
@@ -354,7 +354,7 @@ mem_init_mp(void)
 	// to as its kernel stack. CPU i's kernel stack grows down from virtual
 	// address kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP), and is
 	// divided into two pieces, just like the single stack you set up in
-	// mem_init:
+	// x86_vm_init:
 	//     * [kstacktop_i - KSTKSIZE, kstacktop_i)
 	//          -- backed by physical memory
 	//     * [kstacktop_i - (KSTKSIZE + KSTKGAP), kstacktop_i - KSTKSIZE)
