@@ -652,11 +652,11 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	static void
 boot_map_region(pml4e_t *pml4e, uintptr_t la, size_t size, physaddr_t pa, int perm)
 {
-	uint32_t i =0;//lab2 code
+/*	uint32_t i =0;//lab2 code
 	pte_t *pte_ptr;
 	uintptr_t va = ROUNDUP(la,PGSIZE);
 	for (i = 0; i < ROUNDUP(size, PGSIZE); i+=PGSIZE) { 
-		pte_ptr = pml4e_walk(pml4e, (char*)(va+i), 1);
+		pte_ptr = pml4e_walk(pml4e, (void*)(va+i), 1);//ankush debug
 		if(pte_ptr==NULL)
 			 panic(" Page creation failed\n");			
 		else{
@@ -665,6 +665,21 @@ boot_map_region(pml4e_t *pml4e, uintptr_t la, size_t size, physaddr_t pa, int pe
 		}
 		
 	}//end for//lab2 code
+*/
+
+pte_t *pt;
+	int i = 0;
+
+	perm = perm & 0xFFF;
+        //Run a counter, mapping corresponding physical address to virtual address page by page
+	//Remember to set present permission in page table entry along with setting permissions sent by user program
+	for ( i =0; i < size ; i+=PGSIZE )
+	{
+		pt = pml4e_walk(pml4e, (void*)(la+i), 1);
+		*pt = PTE_ADDR(pa + i) | perm | PTE_P;
+	}
+	return;
+
 }
 
 //
@@ -703,7 +718,7 @@ page_insert(pml4e_t *pml4e, struct PageInfo *pp, void *va, int perm)
 
 	if(*pte&PTE_P)
 	{
-		page_remove(pml4e,va);
+	page_remove(pml4e,va);
 		tlb_invalidate(pml4e,va);
 	}	
 	*pte = page2pa(pp) | (perm |PTE_P); // desired page allocated
@@ -765,6 +780,8 @@ page_remove(pml4e_t *pml4e, void *va)
 		page_decref(pp);
 		*pte = 0;
 		tlb_invalidate(pml4e,va);
+	if(pp->pp_ref==0)
+		page_free(pp);
 	}//lab 2 end
 }
 
@@ -794,7 +811,6 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// value will be preserved between calls to mmio_map_region
 	// (just like nextfree in boot_alloc).
 	static uintptr_t base = MMIOBASE;
-
 	// Reserve size bytes of virtual memory starting at base and
 	// map physical pages [pa,pa+size) to virtual addresses
 	// [base,base+size).  Since this is device memory and not
@@ -848,18 +864,19 @@ static uintptr_t user_mem_check_addr;
 	int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
-	// LAB 3: Your code here.
+/*	// LAB 3: Your code here.
 	uintptr_t i, temp;
 	pte_t *pte;
-	if((uint64_t)va >= ULIM)
-	{
-		user_mem_check_addr = (uintptr_t)va;
-		return -E_FAULT;
-	}	
+//	if((uint64_t)va >= ULIM)
+//	{
+//		user_mem_check_addr = (uintptr_t)va;
+//		return -E_FAULT;
+//	}	
 	for (i = (uintptr_t)va; i < ((uintptr_t)va + len);)
 	{
 		pte = pml4e_walk(env->env_pml4e, (const void *)i, 0);
-		if((!pte) || (!(*pte & perm)))
+//		if((!pte) || (!(*pte & perm)))
+		if (!pte || ( (*pte & (perm | PTE_P)) != (perm | PTE_P) ))
 		{
 			user_mem_check_addr = i;
 			return -E_FAULT;
@@ -872,6 +889,21 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 	}
 	
 	return 0;
+*/
+
+ void * va_end = (void*)ROUNDUP(va + len, PGSIZE);
+    pte_t * pte = NULL;
+
+    for ( ; va < va_end ; va = ROUNDUP(va + PGSIZE, PGSIZE))
+    {
+            pte = pml4e_walk(env->env_pml4e, va, 0);
+            if (!pte || ( (*pte & (perm | PTE_P)) != (perm | PTE_P) ))
+            {
+                user_mem_check_addr = (uintptr_t)va;
+                return  -E_FAULT;
+            }
+    }
+    return 0;
 }
 //
 // Checks that environment 'env' is allowed to access the range

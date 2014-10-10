@@ -1,5 +1,4 @@
 /* See COPYRIGHT for copyright information. */
-
 #include <inc/x86.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
@@ -135,9 +134,6 @@ env_init(void)
 		if (i == NENV - 1) 
 			envs[i].env_link = NULL;
 	}
-	
-	
-	
 	// Per-CPU part of the initialization
 	env_init_percpu();
 }
@@ -184,7 +180,7 @@ env_setup_vm(struct Env *e)
 	// Allocate a page for the page directory
 	if (!(p = page_alloc(0)))
 		return -E_NO_MEM;
-
+	p->pp_ref++;
 	// Now, set e->env_pml4e and initialize the page directory.
 	//
 	// Hint:
@@ -204,12 +200,13 @@ env_setup_vm(struct Env *e)
 
 	// LAB 3: Your code here.
 	
-	e->env_pml4e = page2kva(p);
-	e->env_cr3 = page2pa(p);
+	e->env_pml4e =(pml4e_t*) page2kva(p);
+	e->env_cr3 =(physaddr_t)page2pa(p);
 	memset(e->env_pml4e, 0, PGSIZE);
-	p->pp_ref++;
+	//p->pp_ref++;
 	
-	for(i=PML4(UTOP);i<NPDENTRIES;i++)
+//	for(i=PML4(UTOP);i<NPDENTRIES;i++)
+	 for(i = PML4(UTOP); i < NPMLENTRIES; i++)
 	e->env_pml4e[i]=boot_pml4e[i];
 
 
@@ -303,7 +300,6 @@ static void
 region_alloc(struct Env *e, void *va, size_t len)
 {
 	// LAB 3: Your code here.
-	
 	struct PageInfo *page;
 	void *va_end;
 
@@ -315,7 +311,8 @@ region_alloc(struct Env *e, void *va, size_t len)
 	if (page_insert(e->env_pml4e, page, va, PTE_W |PTE_U) < 0)
 	        panic("region alloc for env panics for page insert");
 	va += PGSIZE;
-}
+	}
+
 
 	// (But only if you need it for load_icode.)
 	//
@@ -324,6 +321,7 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
 }
+
 
 //
 // Set up the initial program binary, stack, and processor flags
@@ -384,13 +382,14 @@ load_icode(struct Env *e, uint8_t *binary)
 	struct Elf *elfhdr;
 	uint64_t remaining_memory, occupied_memory;
 	struct PageInfo *page_var;
-	
+	int rc =0;
 	elfhdr = (struct Elf *)(binary);
 	if(elfhdr->e_magic != ELF_MAGIC)
 	{
 		panic("ELF_MAGIC error in load_icode\n");
 		return;
 	}
+	physaddr_t  old_cr3 = rcr3();
 	lcr3(e->env_cr3);
 	ph = (struct Proghdr *)((uint8_t *)elfhdr + elfhdr->e_phoff);
 	eph = ph + elfhdr->e_phnum;
@@ -410,13 +409,21 @@ load_icode(struct Env *e, uint8_t *binary)
 			memset((void *)occupied_memory, 0, remaining_memory);	
 		}
 	}
-	lcr3(boot_cr3);
-	// Now map one page for the program's initial stack
-	// at virtual address USTACKTOP - PGSIZE.
-	// LAB 3: Your code here.
-	region_alloc(e, (uintptr_t *)(USTACKTOP - PGSIZE), PGSIZE);
+	page_var = page_alloc(0);
+	if(!page_var)
+	{
+		panic("Error allocating page: %e\n", -E_NO_MEM);
+		return;
+	}
+	rc = page_insert(e->env_pml4e, page_var, (void *)(USTACKTOP - PGSIZE), PTE_U | PTE_W);
+	if(rc == -E_NO_MEM)
+	{
+		panic("Error inserting page: %e\n", rc);
+		return;
+	}
 	e->env_tf.tf_rip = elfhdr->e_entry;
-
+	lcr3(old_cr3);
+	return;
 }
 
 //
@@ -431,7 +438,7 @@ env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
 	struct Env *e;
-	if( env_alloc(&e, 0) < 0) return;
+	 env_alloc(&e, 0);
 	 e->env_type = type;
 	load_icode(e, binary);
 
@@ -587,10 +594,10 @@ env_run(struct Env *e)
 	if (curenv && curenv->env_status == ENV_RUNNING)
 		curenv->env_status = ENV_RUNNABLE;
 	curenv = e;
-	e->env_status = ENV_RUNNING;
-	e->env_runs++;
+	curenv->env_status = ENV_RUNNING;
+	curenv->env_runs++;
+	lcr3(curenv->env_cr3);
 	unlock_kernel();//lab4
-	lcr3(e->env_cr3);
-	env_pop_tf(&(e->env_tf));
+	env_pop_tf(&(curenv->env_tf));
 }
 

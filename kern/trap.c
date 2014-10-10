@@ -65,36 +65,36 @@ static const char *trapname(int trapno)
 		return "Hardware Interrupt";
 	return "(unknown trap)";
 }
-
-	extern void t_divide(void);
-	extern void t_dblflt(void);
-	extern void t_tss(void);
-	extern void t_segnp(void);
-	void t_stack(void);
-	void t_gpflt(void);
-	extern void t_pgflt(void);
-	void t_debug(void);
-	void t_nmi(void);
-	void t_brkpt(void);
-	void t_oflow(void);
-	void t_bound(void);
-	void t_illop(void);
-	void t_device(void);
-	void t_syscall(void);
-	void t_align(void);
-	void t_mchk(void);
-	void t_simderr(void);
-	void t_fperr(void);
-	void i_timer(void);
-	void i_kbd(void);
-	void i_serial(void);
-
 void
 trap_init(void)
 {
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
+  extern void t_divide(void);
+        extern void t_dblflt(void);
+        extern void t_tss(void);
+        extern void t_segnp(void);
+        void t_stack(void);
+        void t_gpflt(void);
+        extern void t_pgflt(void);
+        void t_debug(void);
+        void t_nmi(void);
+        void t_brkpt(void);
+        void t_oflow(void);
+        void t_bound(void);
+        void t_illop(void);
+        void t_device(void);
+        void t_syscall(void);
+        void t_align(void);
+        void t_mchk(void);
+        void t_simderr(void);
+        void t_fperr(void);
+        void i_timer(void);
+        void i_kbd(void);
+        void i_serial(void);
+
+
 	SETGATE(idt[T_DIVIDE], 0, GD_KT, t_divide, 0);
 	SETGATE(idt[T_DEBUG], 0, GD_KT, t_debug,0);
 	SETGATE(idt[T_NMI], 0, GD_KT, t_nmi,0);
@@ -156,13 +156,10 @@ trap_init_percpu(void)
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
 	//ts.ts_esp0 = KSTACKTOP;
-//	gdt[(GD_TSS0 >> 3) + cpunum()] = SEG16(STS_T64A, (uint64_t)per_cpu_state, sizeof(struct Taskstate), 0);
-//	gdt[(GD_TSS0 >> 3) + cpunum()].sd_s = 0;
 	// Initialize the TSS slot of the gdt.
 	SETTSS((struct SystemSegdesc64 *)(&gdt[(GD_TSS0>>3)+ 2*cpunum()]),STS_T64A, (uint64_t) (per_cpu_state),sizeof(struct Taskstate), 0);
 	// Load the TSS selector (like other segment selectors, the
 	// bottom three bits are special; we leave them 0)
-//	ltr(GD_TSS0 + (cpunum() * sizeof(struct Segdesc)));
 	ltr(GD_TSS0 + ((2*cpunum())<<3));
 	// Load the IDT
 	lidt(&idt_pd);
@@ -345,7 +342,8 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 3: Your code here.
 	
-	 if(tf->tf_cs == GD_KT)
+	// if(tf->tf_cs == GD_KT)
+	if((tf->tf_cs & 3)==0)
 	{
 		panic("Page fault in kernel!\n");
 	}	

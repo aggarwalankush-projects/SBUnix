@@ -22,7 +22,7 @@ sys_cputs(const char *s, size_t len)
 	// Destroy the environment if not.
 
 	// LAB 3: Your code here.
-	user_mem_assert(curenv, (const void*)s, len, PTE_U);
+	user_mem_assert(curenv, (void*)s, len,PTE_W|PTE_U);
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
 }
@@ -85,7 +85,7 @@ sys_exofork(void)
 
 	// LAB 4: Your code here.
 	struct Env *env;
-	int ret = env_alloc(&env, ENVX(curenv->env_id));
+	int ret = env_alloc(&env, curenv->env_parent_id);
 	if (ret)
 		return ret;
 	env->env_status = ENV_NOT_RUNNABLE;
@@ -186,7 +186,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 		cprintf("\nNo more free memory left\n");
 		return -E_NO_MEM;
 	}
-	if((page_insert(env->env_pml4e, page, va, perm)))
+	if((page_insert(env->env_pml4e, page, va,PTE_U | PTE_P|perm)))
 	{
 		cprintf("\nPage insertion failed\n");
 		page_free(page);
@@ -387,12 +387,23 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 		sys_yield();
 		return 0;
 	}
+	else if(syscallno == SYS_exofork)
+		return sys_exofork();
+	else if(syscallno == SYS_env_set_status)
+		 return sys_env_set_status((envid_t) a1, (int) a2);
+	else if(syscallno == SYS_page_alloc)
+		 return sys_page_alloc((envid_t) a1, (void *) a2, (int) a3);
+	else if(syscallno == SYS_page_unmap)
+		 return sys_page_unmap((envid_t) a1, (void *) a2);
+	else if(syscallno == SYS_page_map)
+		 return sys_page_map((envid_t) a1, (void *) a2,
+                                (envid_t) a3, (void *) a4, (int) a5);
 	else
 	{
 		cprintf("\nInvalid syscall no.: %d \n", syscallno);
-		return -E_INVAL;
+		return -E_NO_SYS;
 	}
-	
+
 
 //	panic("syscall not implemented");
 
