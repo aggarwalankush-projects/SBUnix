@@ -84,7 +84,16 @@ sys_exofork(void)
 	// will appear to return 0.
 
 	// LAB 4: Your code here.
-	panic("sys_exofork not implemented");
+	struct Env *env;
+	int ret = env_alloc(&env, ENVX(curenv->env_id));
+	if (ret)
+		return ret;
+	env->env_status = ENV_NOT_RUNNABLE;
+	env->env_tf = curenv->env_tf;
+	env->env_tf.tf_regs.reg_rax = 0;
+	env->env_parent_id = curenv->env_id;
+	return env->env_id;
+//	panic("sys_exofork not implemented");
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE
@@ -104,7 +113,15 @@ sys_env_set_status(envid_t envid, int status)
 	// envid's status.
 
 	// LAB 4: Your code here.
-	panic("sys_env_set_status not implemented");
+	if (status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE)
+		return -E_INVAL;
+	struct Env *env;
+	int ret = envid2env(envid, &env, 1);
+	if (ret)
+		return ret;
+	env->env_status = status;
+	return 0;
+//	panic("sys_env_set_status not implemented");
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -147,9 +164,35 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	//   parameters for correctness.
 	//   If page_insert() fails, remember to free the page you
 	//   allocated!
-
 	// LAB 4: Your code here.
-	panic("sys_page_alloc not implemented");
+//      panic("sys_page_alloc not implemented");
+
+	struct Env *env;
+	struct PageInfo *page;
+	if(envid2env(envid, &env, 1) < 0)
+		return -E_BAD_ENV;
+	if(((uint64_t)va >= UTOP) || (((uint64_t)va % PGSIZE) != 0))
+	{
+		cprintf("\nabove UTOP or not page aligned\n");	
+		return -E_INVAL;
+	}
+	if((!(perm & PTE_U)) || (!(perm & PTE_P)) || (perm & ~PTE_SYSCALL))
+	{
+		cprintf("\npermission failed\n");
+		return -E_INVAL;
+	}
+	if(!(page = page_alloc(0)))
+	{
+		cprintf("\nNo more free memory left\n");
+		return -E_NO_MEM;
+	}
+	if((page_insert(env->env_pml4e, page, va, perm)))
+	{
+		cprintf("\nPage insertion failed\n");
+		page_free(page);
+		return -E_NO_MEM;
+	}
+	return 0;
 }
 
 // Map the page of memory at 'srcva' in srcenvid's address space
@@ -180,7 +223,50 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
-	panic("sys_page_map not implemented");
+//	panic("sys_page_map not implemented");
+	struct Env *parent, *child;
+	struct PageInfo *page;
+	pte_t *pte;
+	if(envid2env(srcenvid, &parent, 1) < 0)
+	{
+		return -E_BAD_ENV;
+	}
+	if(envid2env(dstenvid, &child, 1) < 0)
+	{
+		return -E_BAD_ENV;
+	}
+	if(((uint64_t)srcva >= UTOP) || (((uint64_t)srcva % PGSIZE) != 0))
+	{
+		cprintf("\n Parent VA > UTOP\n");
+		return -E_INVAL;
+	}
+	if(((uint64_t)dstva >= UTOP) || (((uint64_t)dstva % PGSIZE) != 0))
+	{
+		cprintf("\nChild VA > UTOP\n");
+		return -E_INVAL;
+	}
+	if((!(perm & PTE_U)) && (!(perm & PTE_P)) && (perm & ~PTE_SYSCALL))
+	{
+		cprintf("\nInvalid perms\n");
+		return -E_INVAL;
+	}	
+	if(!(page = page_lookup(parent->env_pml4e, srcva, &pte)))
+	{
+		cprintf("\nPage lookup failure for Parent\n");
+		return -E_INVAL;
+	}
+	if(((perm & PTE_W) != 0) && ((*pte & PTE_W) == 0))
+	{
+		cprintf("\nNo write permissions\n");
+		return -E_INVAL;
+	}
+	if(page_insert(child->env_pml4e, page, dstva, perm))
+	{	
+		page_free(page);
+		return -E_NO_MEM;
+	}
+	return 0;
+
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -196,7 +282,19 @@ sys_page_unmap(envid_t envid, void *va)
 	// Hint: This function is a wrapper around page_remove().
 
 	// LAB 4: Your code here.
-	panic("sys_page_unmap not implemented");
+//	panic("sys_page_unmap not implemented");
+	struct Env *env;
+	int err;
+	if(envid2env(envid, &env, 1) < 0)
+		return -E_BAD_ENV;
+	if(((uint64_t)va >= UTOP) || (((uint64_t)va % PGSIZE) != 0))
+	{
+		cprintf("\nPage_Unmap: VA >= UTOP or VA is not page-aligned\n");
+		return -E_INVAL;
+	}
+	page_remove(env->env_pml4e, va);
+	return 0; 
+
 }
 
 // Try to send 'value' to the target env 'envid'.
