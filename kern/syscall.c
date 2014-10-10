@@ -284,6 +284,11 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 		return sys_getenvid();
 	else if (syscallno == SYS_env_destroy)
 		return sys_env_destroy(a1);
+	else if(syscallno == SYS_yield)
+	{
+		sys_yield();
+		return 0;
+	}
 	else
 	{
 		cprintf("\nInvalid syscall no.: %d \n", syscallno);

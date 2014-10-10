@@ -589,6 +589,7 @@ env_run(struct Env *e)
 	curenv = e;
 	e->env_status = ENV_RUNNING;
 	e->env_runs++;
+	unlock_kernel();//lab4
 	lcr3(e->env_cr3);
 	env_pop_tf(&(e->env_tf));
 }
