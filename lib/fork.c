@@ -77,6 +77,7 @@ duppage(envid_t envid, unsigned pn)
 	pte_t pte = uvpt[pn];
 	int cow_perm = PTE_P | PTE_U | PTE_COW;
 	addr = (uintptr_t)(pn << PGSHIFT);
+	cprintf("\tankush debugger pn in duppage : %d",addr);
 	if(pte & PTE_SHARE)
 	{
 		r = sys_page_map(0, (void *)addr, envid, (void *)addr, PGOFF(pte));
@@ -151,6 +152,7 @@ fork(void)
 				continue;
 			if(pn == PPN(UXSTACKTOP - 1))
 				continue;
+			cprintf("\nankush debugger pn is: %d",pn);
 			duppage(envid, pn);
 		}	
 	}

@@ -269,7 +269,6 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	}
 	if(page_insert(child->env_pml4e, page, dstva, perm))
 	{	
-		page_free(page);
 		return -E_NO_MEM;
 	}
 	return 0;

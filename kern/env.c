@@ -205,8 +205,7 @@ env_setup_vm(struct Env *e)
 	memset(e->env_pml4e, 0, PGSIZE);
 	//p->pp_ref++;
 	
-//	for(i=PML4(UTOP);i<NPDENTRIES;i++)
-	 for(i = PML4(UTOP); i < NPMLENTRIES; i++)
+	for(i = PML4(UTOP); i < NPMLENTRIES; i++)
 	e->env_pml4e[i]=boot_pml4e[i];
 
 

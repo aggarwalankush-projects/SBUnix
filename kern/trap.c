@@ -91,28 +91,11 @@ trap_init(void)
         void t_mchk(void);
         void t_simderr(void);
         void t_fperr(void);
-      /*  void i_timer(void);
+  void i_timer(void);
         void i_kbd(void);
         void i_serial(void);
-*/
-/*	extern void handler_irq0();
-        extern void handler_irq1();
-        extern void handler_irq2();
-        extern void handler_irq3();
-        extern void handler_irq4();
-        extern void handler_irq5();
-        extern void handler_irq6();
-        extern void handler_irq7();
-        extern void handler_irq8();
-        extern void handler_irq9();
-        extern void handler_irq10();
-        extern void handler_irq11();
-        extern void handler_irq12();
-        extern void handler_irq13();
-        extern void handler_irq14();
-        extern void handler_irq15();
 
-*/
+
 	SETGATE(idt[T_DIVIDE], 0, GD_KT, t_divide, 0);
 	SETGATE(idt[T_DEBUG], 0, GD_KT, t_debug,0);
 	SETGATE(idt[T_NMI], 0, GD_KT, t_nmi,0);
@@ -132,27 +115,10 @@ trap_init(void)
 	SETGATE(idt[T_MCHK], 0, GD_KT, t_mchk,0);
 	SETGATE(idt[T_SIMDERR], 0, GD_KT, t_simderr,0);
 	SETGATE(idt[T_SYSCALL], 0, GD_KT, t_syscall, 3);
-/*	SETGATE(idt[IRQ_TIMER + IRQ_OFFSET], 0, GD_KT, i_timer, 0);
+	SETGATE(idt[IRQ_TIMER + IRQ_OFFSET], 0, GD_KT, i_timer, 0);
 	SETGATE(idt[IRQ_KBD + IRQ_OFFSET], 0, GD_KT, i_kbd, 0);
 	SETGATE(idt[IRQ_SERIAL + IRQ_OFFSET], 0, GD_KT, i_serial, 0);
-*/
-/*	 SETGATE(idt[IRQ_OFFSET], 0, GD_KT, handler_irq0,0 );
-        SETGATE(idt[IRQ_OFFSET + 1], 0, GD_KT, handler_irq1,0);
-        SETGATE(idt[IRQ_OFFSET + 2], 0, GD_KT, handler_irq2, 0);
-        SETGATE(idt[IRQ_OFFSET + 3], 0, GD_KT, handler_irq3, 0);
-        SETGATE(idt[IRQ_OFFSET + 4], 0, GD_KT, handler_irq4, 0);
-        SETGATE(idt[IRQ_OFFSET + 5], 0, GD_KT, handler_irq5,0);
-        SETGATE(idt[IRQ_OFFSET + 6], 0, GD_KT, handler_irq6, 0);
-        SETGATE(idt[IRQ_OFFSET + 7], 0, GD_KT, handler_irq7, 0);
-        SETGATE(idt[IRQ_OFFSET + 8], 0, GD_KT, handler_irq8, 0);
-        SETGATE(idt[IRQ_OFFSET + 9], 0, GD_KT, handler_irq9, 0);
-        SETGATE(idt[IRQ_OFFSET + 10], 0, GD_KT, handler_irq10,0);
-        SETGATE(idt[IRQ_OFFSET + 11], 0, GD_KT, handler_irq11, 0);
-        SETGATE(idt[IRQ_OFFSET + 12], 0, GD_KT, handler_irq12, 0);
-        SETGATE(idt[IRQ_OFFSET + 13], 0, GD_KT, handler_irq13, 0);
-        SETGATE(idt[IRQ_OFFSET + 14], 0, GD_KT, handler_irq14,0);
-        SETGATE(idt[IRQ_OFFSET + 15], 0, GD_KT, handler_irq15, 0);
-*/
+
 	
 	idt_pd.pd_lim = sizeof(idt)-1;
 	idt_pd.pd_base = (uint64_t)idt;

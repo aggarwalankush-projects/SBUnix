@@ -427,7 +427,7 @@ page_init(void)
                 }               
                 else if (i >= PGNUM(PADDR(KERNBASE)) && i < PGNUM(PADDR(boot_alloc(0)))) {
                      continue;
-           	}else if (page2pa(&pages[i]) == MPENTRY_PADDR)
+           	}else if (i == PPN(MPENTRY_PADDR))
 		continue; 
 
 		if(last)
@@ -497,15 +497,20 @@ page_free(struct PageInfo *pp)
 	// Hint: You may want to panic if pp->pp_ref is nonzero or
 	// pp->pp_link is not NULL.
 	
-	 if(pp->pp_ref == 0) {//lab2 code
+	if (pp && pp->pp_ref != 0 )
+	{
+		panic (" Freeing page with positive reference count\n");
+	}
+	if ( page_free_list == NULL )
+	{
+		page_free_list = pp;
+		page_free_list->pp_link = NULL;
+	}
+	else
+	{
 		pp->pp_link = page_free_list;
 		page_free_list = pp;
 	}
-	else if (pp->pp_link == NULL) {
-		panic("page link NULL");
-	}
-	else
-		panic("Invalid Free\n");//lab2 code
 
 }
 
@@ -652,22 +657,8 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	static void
 boot_map_region(pml4e_t *pml4e, uintptr_t la, size_t size, physaddr_t pa, int perm)
 {
-/*	uint32_t i =0;//lab2 code
-	pte_t *pte_ptr;
-	uintptr_t va = ROUNDUP(la,PGSIZE);
-	for (i = 0; i < ROUNDUP(size, PGSIZE); i+=PGSIZE) { 
-		pte_ptr = pml4e_walk(pml4e, (void*)(va+i), 1);//ankush debug
-		if(pte_ptr==NULL)
-			 panic(" Page creation failed\n");			
-		else{
-			*pte_ptr = pa+i;
-			*pte_ptr = *pte_ptr | (perm | PTE_P) ;
-		}
-		
-	}//end for//lab2 code
-*/
 
-pte_t *pt;
+	pte_t *pt;
 	int i = 0;
 
 	perm = perm & 0xFFF;
@@ -714,7 +705,7 @@ page_insert(pml4e_t *pml4e, struct PageInfo *pp, void *va, int perm)
 
 	if(pte == NULL)	return -E_NO_MEM;//return unsuccess case
 	
-	pp->pp_ref = pp->pp_ref + 1 ; 
+	pp->pp_ref++; 
 
 	if(*pte&PTE_P)
 	{
@@ -864,19 +855,18 @@ static uintptr_t user_mem_check_addr;
 	int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
-/*	// LAB 3: Your code here.
+	// LAB 3: Your code here.
 	uintptr_t i, temp;
 	pte_t *pte;
-//	if((uint64_t)va >= ULIM)
-//	{
-//		user_mem_check_addr = (uintptr_t)va;
-//		return -E_FAULT;
-//	}	
+	if((uint64_t)va >= ULIM)
+	{
+		user_mem_check_addr = (uintptr_t)va;
+		return -E_FAULT;
+	}	
 	for (i = (uintptr_t)va; i < ((uintptr_t)va + len);)
 	{
 		pte = pml4e_walk(env->env_pml4e, (const void *)i, 0);
-//		if((!pte) || (!(*pte & perm)))
-		if (!pte || ( (*pte & (perm | PTE_P)) != (perm | PTE_P) ))
+		if((!pte) || (!(*pte & perm)))
 		{
 			user_mem_check_addr = i;
 			return -E_FAULT;
@@ -889,21 +879,7 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 	}
 	
 	return 0;
-*/
 
- void * va_end = (void*)ROUNDUP(va + len, PGSIZE);
-    pte_t * pte = NULL;
-
-    for ( ; va < va_end ; va = ROUNDUP(va + PGSIZE, PGSIZE))
-    {
-            pte = pml4e_walk(env->env_pml4e, va, 0);
-            if (!pte || ( (*pte & (perm | PTE_P)) != (perm | PTE_P) ))
-            {
-                user_mem_check_addr = (uintptr_t)va;
-                return  -E_FAULT;
-            }
-    }
-    return 0;
 }
 //
 // Checks that environment 'env' is allowed to access the range
