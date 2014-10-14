@@ -721,7 +721,8 @@ page_insert(pml4e_t *pml4e, struct PageInfo *pp, void *va, int perm)
 //
 // Return the page mapped at virtual address 'va'.
 // If pte_store is not zero, then we store in it the address
-// of the pte for this page.  This is used by page_remove and
+// of the ptntptr_t addr;
+//e for this page.  This is used by page_remove and
 // can be used to verify page permissions for syscall arguments,
 // but should not be used by most callers.
 //
@@ -771,8 +772,8 @@ page_remove(pml4e_t *pml4e, void *va)
 		page_decref(pp);
 		*pte = 0;
 		tlb_invalidate(pml4e,va);
-	if(pp->pp_ref==0)
-		page_free(pp);
+	//if(pp->pp_ref==0)
+	//	page_free(pp);
 	}//lab 2 end
 }
 
@@ -856,7 +857,7 @@ static uintptr_t user_mem_check_addr;
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
-	uintptr_t i, temp;
+	uintptr_t i, temp_var;
 	pte_t *pte;
 	if((uint64_t)va >= ULIM)
 	{
@@ -871,9 +872,9 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 			user_mem_check_addr = i;
 			return -E_FAULT;
 		}
-		temp = (uintptr_t)ROUNDUP(i, PGSIZE);
-		if(i!=temp)
-			i=temp;
+		temp_var = (uintptr_t)ROUNDUP(i, PGSIZE);
+		if(i!=temp_var)
+			i=temp_var;
 		else
 			i=i+PGSIZE;
 	}

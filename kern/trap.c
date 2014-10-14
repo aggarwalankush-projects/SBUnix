@@ -72,7 +72,7 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-  extern void t_divide(void);
+	extern void t_divide(void);
         extern void t_dblflt(void);
         extern void t_tss(void);
         extern void t_segnp(void);
@@ -91,10 +91,22 @@ trap_init(void)
         void t_mchk(void);
         void t_simderr(void);
         void t_fperr(void);
-  void i_timer(void);
-        void i_kbd(void);
-        void i_serial(void);
-
+	extern void handler_irq0();
+        extern void handler_irq1();
+        extern void handler_irq2();
+        extern void handler_irq3();
+        extern void handler_irq4();
+        extern void handler_irq5();
+        extern void handler_irq6();
+        extern void handler_irq7();
+        extern void handler_irq8();
+        extern void handler_irq9();
+        extern void handler_irq10();
+        extern void handler_irq11();
+        extern void handler_irq12();
+        extern void handler_irq13();
+        extern void handler_irq14();
+        extern void handler_irq15();
 
 	SETGATE(idt[T_DIVIDE], 0, GD_KT, t_divide, 0);
 	SETGATE(idt[T_DEBUG], 0, GD_KT, t_debug,0);
@@ -115,9 +127,23 @@ trap_init(void)
 	SETGATE(idt[T_MCHK], 0, GD_KT, t_mchk,0);
 	SETGATE(idt[T_SIMDERR], 0, GD_KT, t_simderr,0);
 	SETGATE(idt[T_SYSCALL], 0, GD_KT, t_syscall, 3);
-	SETGATE(idt[IRQ_TIMER + IRQ_OFFSET], 0, GD_KT, i_timer, 0);
-	SETGATE(idt[IRQ_KBD + IRQ_OFFSET], 0, GD_KT, i_kbd, 0);
-	SETGATE(idt[IRQ_SERIAL + IRQ_OFFSET], 0, GD_KT, i_serial, 0);
+	
+	SETGATE(idt[IRQ_OFFSET], 0, GD_KT, handler_irq0, 0);
+        SETGATE(idt[IRQ_OFFSET + 1], 0, GD_KT, handler_irq1,0);
+        SETGATE(idt[IRQ_OFFSET + 2], 0, GD_KT, handler_irq2, 0);
+        SETGATE(idt[IRQ_OFFSET + 3], 0, GD_KT, handler_irq3, 0);
+        SETGATE(idt[IRQ_OFFSET + 4], 0, GD_KT, handler_irq4, 0);
+        SETGATE(idt[IRQ_OFFSET + 5], 0, GD_KT, handler_irq5, 0);
+        SETGATE(idt[IRQ_OFFSET + 6], 0, GD_KT, handler_irq6, 0);
+        SETGATE(idt[IRQ_OFFSET + 7], 0, GD_KT, handler_irq7, 0);
+        SETGATE(idt[IRQ_OFFSET + 8], 0, GD_KT, handler_irq8, 0);
+        SETGATE(idt[IRQ_OFFSET + 9], 0, GD_KT, handler_irq9,0 );
+        SETGATE(idt[IRQ_OFFSET + 10], 0, GD_KT, handler_irq10,0 );
+        SETGATE(idt[IRQ_OFFSET + 11], 0, GD_KT, handler_irq11,0 );
+        SETGATE(idt[IRQ_OFFSET + 12], 0, GD_KT, handler_irq12,0 );
+        SETGATE(idt[IRQ_OFFSET + 13], 0, GD_KT, handler_irq13,0);
+        SETGATE(idt[IRQ_OFFSET + 14], 0, GD_KT, handler_irq14,0);
+        SETGATE(idt[IRQ_OFFSET + 15], 0, GD_KT, handler_irq15,0);
 
 	
 	idt_pd.pd_lim = sizeof(idt)-1;
@@ -255,8 +281,11 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
-	if(tf->tf_trapno==IRQ_OFFSET){return;}
-		
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+		lapic_eoi();
+		sched_yield();
+		return;
+	}		
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -344,8 +373,7 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 3: Your code here.
 	
- if(tf->tf_cs == GD_KT)
-//	if((tf->tf_cs & 3)==0)
+	 if(tf->tf_cs == GD_KT)
 	{
 		panic("Page fault in kernel!\n");
 	}	
@@ -393,21 +421,21 @@ page_fault_handler(struct Trapframe *tf)
 		env_destroy(curenv);
 	}
 
-	struct UTrapframe user_tr_frame;
+	struct UTrapframe user_trap_frame;
 	uintptr_t ex_stack;
 	int perm = PTE_U | PTE_W | PTE_P;
-	user_tr_frame.utf_fault_va = fault_va;
-	user_tr_frame.utf_err = tf->tf_err;
-	user_tr_frame.utf_regs = tf->tf_regs;
-	user_tr_frame.utf_rip = tf->tf_rip;
-	user_tr_frame.utf_eflags = tf->tf_eflags;
-	user_tr_frame.utf_rsp = tf->tf_rsp;
+	user_trap_frame.utf_fault_va = fault_va;
+	user_trap_frame.utf_err = tf->tf_err;
+	user_trap_frame.utf_regs = tf->tf_regs;
+	user_trap_frame.utf_rip = tf->tf_rip;
+	user_trap_frame.utf_eflags = tf->tf_eflags;
+	user_trap_frame.utf_rsp = tf->tf_rsp;
 	if((tf->tf_rsp >= UXSTACKTOP-PGSIZE) && (tf->tf_rsp <= UXSTACKTOP - 1))
-		ex_stack = tf->tf_rsp - sizeof(user_tr_frame) - 8;  //recursive
+		ex_stack = tf->tf_rsp - sizeof(user_trap_frame) - 8;  //recursive
 	else
-		ex_stack = UXSTACKTOP - sizeof(user_tr_frame); //non-recursive
-	user_mem_assert(curenv, (void *)ex_stack, sizeof(user_tr_frame), perm);
-	memmove((void *)ex_stack, (void *)&user_tr_frame, sizeof(user_tr_frame));
+		ex_stack = UXSTACKTOP - sizeof(user_trap_frame); //non-recursive
+	user_mem_assert(curenv, (void *)ex_stack, sizeof(user_trap_frame), perm);
+	memmove((void *)ex_stack, (void *)&user_trap_frame, sizeof(user_trap_frame));
 	tf->tf_rip = (uintptr_t)curenv->env_pgfault_upcall;
 	tf->tf_rsp = (uintptr_t)ex_stack;
 	env_run(curenv);
