@@ -69,8 +69,8 @@ _pgfault_upcall:
 	// ways as registers become unavailable as scratch space.
 	//
 	// LAB 4: Your code here.
-	popq %rax
-	xorq %rax, %rax
+	popq %rcx
+	xorq %rcx, %rcx
 	movq %rsp, %rbx
 	movq 136(%rsp), %rax
 	movq 152(%rsp), %rsp
