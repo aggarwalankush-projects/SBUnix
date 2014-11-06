@@ -178,7 +178,7 @@ env_setup_vm(struct Env *e)
 	struct PageInfo *p = NULL;
 
 	// Allocate a page for the page directory
-	if (!(p = page_alloc(0)))
+	if (!(p = page_alloc(ALLOC_ZERO)))
 		return -E_NO_MEM;
 	p->pp_ref++;
 	// Now, set e->env_pml4e and initialize the page directory.
@@ -305,7 +305,7 @@ region_alloc(struct Env *e, void *va, size_t len)
 	va_end=ROUNDUP(va + len, PGSIZE);
 	va = ROUNDDOWN(va, PGSIZE);
 	while (va < va_end) {
-	if ((page=page_alloc(0))==NULL)
+	if ((page=page_alloc(ALLOC_ZERO))==NULL)
 		panic("region alloc for env panics for page alloc");
 	if (page_insert(e->env_pml4e, page, va, PTE_W |PTE_U) < 0)
 	        panic("region alloc for env panics for page insert");
@@ -408,7 +408,7 @@ load_icode(struct Env *e, uint8_t *binary)
 			memset((void *)occupied_memory, 0, remaining_memory);	
 		}
 	}
-	page_var = page_alloc(0);
+	page_var = page_alloc(ALLOC_ZERO);
 	if(!page_var)
 	{
 		panic("Error allocating page: %e\n", -E_NO_MEM);
@@ -443,6 +443,8 @@ env_create(uint8_t *binary, enum EnvType type)
 	 env_alloc(&e, 0);
 	 e->env_type = type;
 	load_icode(e, binary);
+	 if (e->env_type == ENV_TYPE_FS)
+                e->env_tf.tf_eflags |= FL_IOPL_3;
 
 
 }

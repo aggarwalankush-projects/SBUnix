@@ -132,7 +132,21 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
-	panic("sys_env_set_trapframe not implemented");
+	 struct Env *env;
+        if(envid2env(envid, &env, 1)<0)
+                return -E_BAD_ENV;
+
+	tf->tf_cs |= 3 ;
+ 
+        tf->tf_eflags |= FL_IF;
+
+        if(tf->tf_rip < UTOP)
+                env->env_tf = *tf;
+	return 0;
+
+
+
+//	panic("sys_env_set_trapframe not implemented");
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -201,7 +215,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 		cprintf("\nsys_page_alloc:permission failed\n");
 		return -E_INVAL;
 	}
-	if(!(page = page_alloc(0)))
+	if(!(page = page_alloc(ALLOC_ZERO)))
 	{
 		cprintf("\nsys_page_alloc:No more free memory left\n");
 		return -E_NO_MEM;
@@ -405,6 +419,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm){
 	
 
 //	panic("sys_ipc_try_send not implemented");
+
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -478,6 +493,8 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 		return sys_ipc_try_send(a1, a2, (void *)a3, a4);
 	else if(syscallno == SYS_ipc_recv)
 		return sys_ipc_recv((void *)a1);
+	else if(syscallno == SYS_env_set_trapframe)
+                return sys_env_set_trapframe(a1, (struct Trapframe *)a2);
 	else
 	{
 		cprintf("\nInvalid syscall no.: %d \n", syscallno);

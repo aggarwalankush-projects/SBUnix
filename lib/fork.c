@@ -71,25 +71,33 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 	
 	// LAB 4: Your code here.
-	uint64_t va = pn * PGSIZE;
-        envid_t envid_parent = sys_getenvid();
-
-
-        if(((uvpt[pn] & PTE_W)) || ((uvpt[pn] & PTE_COW))) {
-                if(sys_page_map(envid_parent,(void *) va, envid, (void *)va, PTE_COW | PTE_P | PTE_U) < 0)
-                        panic(" duppage: Sys page Map Failed for child\n");
-                if(sys_page_map(envid_parent,(void *)va,envid_parent, (void *)va, PTE_COW | PTE_P | PTE_U) < 0)
-                        panic(" duppage :Syspage Page Map Failed for parent\n");
-
-        }
-        else
+	uintptr_t addr = (uintptr_t)(pn <<PGSHIFT);
+        if(uvpt[pn] & PTE_SHARE)
         {
-                if(sys_page_map(envid_parent, (void *)va, envid,(void *) va,  PGOFF(uvpt[pn])) < 0)
-                        panic(" duppage : Page Map Failed as it is not writable or Copy on write\n");
+     		r = sys_page_map(0, (void *)addr, envid, (void *)addr, PGOFF(uvpt[pn]));
+	        if(r)
+        		panic("\nduppage : sys_page_map error: \n");
+	        return 0;
         }
-        return 0;
-//      panic("duppage not implemented");
-//      return 0;
+        if(!((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)))
+        {
+	        r = sys_page_map(0, (void *)addr, envid, (void *)addr, PGOFF(uvpt[pn]));
+	        if(r)
+		        panic("\nduppage: sys_page_map error: \n");
+	        return 0;
+        }
+        r = sys_page_map(0, (void *)addr, envid, (void *)addr,PTE_P | PTE_U | PTE_COW);
+        if(r)
+	        panic("\nduppage :sys_page_map error for parent: \n");
+        r = sys_page_map(0, (void *)addr, 0, (void *)addr,PTE_P | PTE_U | PTE_COW);
+        if(r)
+        	panic("\nduppage : sys_page_map error for child: \n");
+
+       	//panic("duppage not implemented");
+	return 0;
+
+
+
 
 }
 
@@ -115,7 +123,6 @@ fork(void)
 	// LAB 4: Your code here.
         int ret =0;
         envid_t env_id ;
-extern unsigned char end[];
         envid_t pid = sys_getenvid();
 
         set_pgfault_handler(pgfault);
@@ -128,9 +135,9 @@ extern unsigned char end[];
                 thisenv = &envs[ENVX(sys_getenvid())];
                 return 0;
         }
-        /*copy address space */
+       // copy address space 
         uintptr_t addr;
-        for (addr = (uintptr_t)UTEXT; addr < (uintptr_t)end; addr += PGSIZE)
+        for (addr = (uintptr_t)UTEXT; addr < (uintptr_t)USTACKTOP; addr += PGSIZE)
         {
                 if( (uvpml4e[VPML4E(addr)] & PTE_P) && (uvpde[VPDPE(addr)] & PTE_P) && (uvpd[VPD(addr)] & PTE_P) && (uvpt[VPN(addr)]&PTE_P) )
                 {
@@ -138,15 +145,16 @@ extern unsigned char end[];
                         duppage(env_id, VPN(addr));
                 }
         }
-        duppage(env_id, VPN(USTACKTOP-PGSIZE));
+       // duppage(env_id, VPN(USTACKTOP-PGSIZE));
 	if( (ret = sys_page_alloc(env_id,(void *) UXSTACKTOP-PGSIZE, PTE_U | PTE_P | PTE_W))<0)
                 panic(" fork: child page allocation fails in  exception stack\n");
         ret = sys_env_set_pgfault_upcall(env_id, thisenv->env_pgfault_upcall);
 
-        /*USTACKTOP*/
+        //USTACKTOP
         if((ret = sys_env_set_status(env_id,ENV_RUNNABLE))<0)
            panic(" fork: Unable to make child runnable\n");
         return env_id ;
+
 
 	//panic("fork not implemented");
 }
