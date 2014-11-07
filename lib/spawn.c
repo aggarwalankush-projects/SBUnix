@@ -301,10 +301,9 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
-	int pn, end_pn;
         uint64_t va;
 
-        for(va = UTEXT;va < UTOP; va += PGSIZE)
+        for(va = UTEXT;va < USTACKTOP-PGSIZE; va += PGSIZE)
         {
         	if(!((uvpml4e[VPML4E(va)])&&(uvpde[VPDPE(va)]) && (uvpd[VPD(va)] )))
 		        continue;
