@@ -12,6 +12,7 @@
 #include <kern/console.h>
 #include <kern/sched.h>
 #include <kern/time.h>
+#include <kern/e1000.h>
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -457,9 +458,32 @@ static int
 sys_time_msec(void)
 {
 	// LAB 6: Your code here.
-	panic("sys_time_msec not implemented");
+	return time_msec();
+	//panic("sys_time_msec not implemented");
 }
 
+static int
+sys_net_e1000_transmit(char *packet, uint32_t packet_length)
+{
+	int r;
+	if((uint64_t)packet >= UTOP)
+		return -E_INVAL;
+
+	if((r = e1000_transmit(packet, packet_length)) < 0)
+		return r;
+
+	return 0;
+}
+
+static int
+sys_net_e1000_receive(char *packet)
+{
+	int r;
+	if((uint64_t)packet >= UTOP)
+		return -E_INVAL;
+	r = e1000_receive(packet);
+	return r;
+}
 
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -504,6 +528,12 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 		return sys_ipc_recv((void *)a1);
 	else if(syscallno == SYS_env_set_trapframe)
                 return sys_env_set_trapframe(a1, (struct Trapframe *)a2);
+    else if(syscallno == SYS_time_msec)
+		return sys_time_msec();
+	else if(syscallno == SYS_net_e1000_transmit)
+		return sys_net_e1000_transmit((char *)a1, (uint32_t)a2); 	 
+	else if(syscallno == SYS_net_e1000_receive)
+		return sys_net_e1000_receive((char *)a1);	       
 	else
 	{
 		cprintf("\nInvalid syscall no.: %d \n", syscallno);

@@ -17,6 +17,8 @@ enum {
 	SYS_yield,
 	SYS_ipc_try_send,
 	SYS_ipc_recv,
+	SYS_net_e1000_transmit,
+	SYS_net_e1000_receive,
 	SYS_time_msec,
 	NSYSCALLS
 };
