@@ -30,6 +30,27 @@ sched_yield(void)
 
 	// LAB 4: Your code here.
 
+	uint32_t i,j,current_index,next_index=0;
+	struct Env *current_env=curenv;
+	struct Env * next;
+	if(current_env){
+		current_index=ENVX(current_env->env_id);
+	}
+	i=current_index;
+	for(j=0;j<NENV;j++)
+	{	
+		next_index=(++i)%NENV;
+		next=&envs[next_index];
+		if(next->env_status==ENV_RUNNABLE){
+			env_run(next);
+		}
+		if(next==current_env && next->env_status==ENV_RUNNING)
+		{
+			env_run(next);
+		}
+	}
+
+	
 	// sched_halt never returns
 	sched_halt();
 }

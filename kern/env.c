@@ -1,5 +1,4 @@
 /* See COPYRIGHT for copyright information. */
-
 #include <inc/x86.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
@@ -123,7 +122,18 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
-
+	env_free_list=NULL;
+	uint64_t i;
+	for(i = 0; i<NENV; i++) {
+		envs[i].env_id = 0;
+		envs[i].env_status = ENV_FREE;
+		if(i==0)
+			 env_free_list = &envs[i];		
+		else
+			 envs[i-1].env_link = &envs[i];
+		if (i == NENV - 1) 
+			envs[i].env_link = NULL;
+	}
 	// Per-CPU part of the initialization
 	env_init_percpu();
 }
@@ -168,10 +178,10 @@ env_setup_vm(struct Env *e)
 	struct PageInfo *p = NULL;
 
 	// Allocate a page for the page directory
-	if (!(p = page_alloc(0)))
+	if (!(p = page_alloc(ALLOC_ZERO)))
 		return -E_NO_MEM;
-
-	// Now, set e->env_pgdir and initialize the page directory.
+	p->pp_ref++;
+	// Now, set e->env_pml4e and initialize the page directory.
 	//
 	// Hint:
 	//    - The VA space of all envs is identical above UTOP
@@ -189,6 +199,15 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
+	
+	e->env_pml4e =(pml4e_t*) page2kva(p);
+	e->env_cr3 =(physaddr_t)page2pa(p);
+	memset(e->env_pml4e, 0, PGSIZE);
+	//p->pp_ref++;
+	
+	for(i = PML4(UTOP); i < NPMLENTRIES; i++)
+	e->env_pml4e[i]=boot_pml4e[i];
+
 
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
@@ -254,7 +273,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 
 	// Enable interrupts while in user mode.
 	// LAB 4: Your code here.
-
+	e->env_tf.tf_eflags |= FL_IF;
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
 
@@ -280,6 +299,20 @@ static void
 region_alloc(struct Env *e, void *va, size_t len)
 {
 	// LAB 3: Your code here.
+	struct PageInfo *page;
+	void *va_end;
+
+	va_end=ROUNDUP(va + len, PGSIZE);
+	va = ROUNDDOWN(va, PGSIZE);
+	while (va < va_end) {
+	if ((page=page_alloc(ALLOC_ZERO))==NULL)
+		panic("region alloc for env panics for page alloc");
+	if (page_insert(e->env_pml4e, page, va, PTE_W |PTE_U) < 0)
+	        panic("region alloc for env panics for page insert");
+	va += PGSIZE;
+	}
+
+
 	// (But only if you need it for load_icode.)
 	//
 	// Hint: It is easier to use region_alloc if the caller can pass
@@ -287,6 +320,7 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
 }
+
 
 //
 // Set up the initial program binary, stack, and processor flags
@@ -342,11 +376,53 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  What?  (See env_run() and env_pop_tf() below.)
 
 	// LAB 3: Your code here
-	// Now map one page for the program's initial stack
-	// at virtual address USTACKTOP - PGSIZE.
 
-	// LAB 3: Your code here.
-    e->elf = binary;
+	struct Proghdr *ph, *eph;
+	struct Elf *elfhdr;
+	uint64_t remaining_memory, occupied_memory;
+	struct PageInfo *page_var;
+	int rc =0;
+	elfhdr = (struct Elf *)(binary);
+	if(elfhdr->e_magic != ELF_MAGIC)
+	{
+		panic("ELF_MAGIC error in load_icode\n");
+		return;
+	}
+	physaddr_t  old_cr3 = rcr3();
+	lcr3(e->env_cr3);
+	ph = (struct Proghdr *)((uint8_t *)elfhdr + elfhdr->e_phoff);
+	eph = ph + elfhdr->e_phnum;
+	for(; ph < eph; ph++)
+	{
+		if(ph->p_type == ELF_PROG_LOAD)
+		{
+			if(ph->p_filesz > ph->p_memsz)
+			{
+				panic(" Memory error from load_icode\n");
+				return;
+			}	
+			region_alloc(e, (void *)ph->p_va, ph->p_memsz);
+			memcpy((void *)ph->p_va, binary + ph->p_offset, ph->p_filesz);
+			occupied_memory = ph->p_va + ph->p_filesz;
+			remaining_memory = ph->p_memsz - ph->p_filesz;
+			memset((void *)occupied_memory, 0, remaining_memory);	
+		}
+	}
+	page_var = page_alloc(ALLOC_ZERO);
+	if(!page_var)
+	{
+		panic("Error allocating page: %e\n", -E_NO_MEM);
+		return;
+	}
+	rc = page_insert(e->env_pml4e, page_var, (void *)(USTACKTOP - PGSIZE), PTE_U | PTE_W);
+	if(rc == -E_NO_MEM)
+	{
+		panic("Error inserting page: %e\n", rc);
+		return;
+	}
+	e->env_tf.tf_rip = elfhdr->e_entry;
+	lcr3(old_cr3);
+	return;
 }
 
 //
@@ -363,6 +439,14 @@ env_create(uint8_t *binary, enum EnvType type)
 
 	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
 	// LAB 5: Your code here.
+	struct Env *e;
+	 env_alloc(&e, 0);
+	 e->env_type = type;
+	load_icode(e, binary);
+	 if (e->env_type == ENV_TYPE_FS)
+                e->env_tf.tf_eflags |= FL_IOPL_3;
+
+
 }
 
 //
@@ -511,7 +595,13 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
-
-	panic("env_run not yet implemented");
+	if (curenv && curenv->env_status == ENV_RUNNING)
+		curenv->env_status = ENV_RUNNABLE;
+	curenv = e;
+	curenv->env_status = ENV_RUNNING;
+	curenv->env_runs++;
+	lcr3(curenv->env_cr3);
+	unlock_kernel();//lab4
+	env_pop_tf(&(curenv->env_tf));
 }
 
