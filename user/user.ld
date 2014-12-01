@@ -43,28 +43,28 @@ SECTIONS
 	 * string table, and the end of the stabs string table, respectively.
 	 */
 
-	/* .stab_info 0x200000 : { */
-	/* 	QUAD(__STAB_BEGIN__); */
-	/* 	QUAD(__STAB_END__); */
-	/* 	QUAD(__STABSTR_BEGIN__); */
-	/* 	QUAD(__STABSTR_END__); */
-	/* } */
+	.stab_info 0x200000 : {
+		LONG(__STAB_BEGIN__);
+		LONG(__STAB_END__);
+		LONG(__STABSTR_BEGIN__);
+		LONG(__STABSTR_END__);
+	}
 
-	/* .stab : { */
-	/* 	__STAB_BEGIN__ = DEFINED(__STAB_BEGIN__) ? __STAB_BEGIN__ : .; */
-	/* 	*(.stab); */
-	/* 	__STAB_END__ = DEFINED(__STAB_END__) ? __STAB_END__ : .; */
-	/* 	BYTE(0)		/1* Force the linker to allocate space */
-	/* 			   for this section *1/ */
-	/* } */
+	.stab : {
+		__STAB_BEGIN__ = DEFINED(__STAB_BEGIN__) ? __STAB_BEGIN__ : .;
+		*(.stab);
+		__STAB_END__ = DEFINED(__STAB_END__) ? __STAB_END__ : .;
+		BYTE(0)		/* Force the linker to allocate space
+				   for this section */
+	}
 
-	/* .stabstr : { */
-	/* 	__STABSTR_BEGIN__ = DEFINED(__STABSTR_BEGIN__) ? __STABSTR_BEGIN__ : .; */
-	/* 	*(.stabstr); */
-	/* 	__STABSTR_END__ = DEFINED(__STABSTR_END__) ? __STABSTR_END__ : .; */
-	/* 	BYTE(0)		/1* Force the linker to allocate space */
-	/* 			   for this section *1/ */
-	/* } */
+	.stabstr : {
+		__STABSTR_BEGIN__ = DEFINED(__STABSTR_BEGIN__) ? __STABSTR_BEGIN__ : .;
+		*(.stabstr);
+		__STABSTR_END__ = DEFINED(__STABSTR_END__) ? __STABSTR_END__ : .;
+		BYTE(0)		/* Force the linker to allocate space
+				   for this section */
+	}
 
 	/DISCARD/ : {
 		*(.note.GNU-stack .comment)

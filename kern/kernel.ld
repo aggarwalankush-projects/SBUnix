@@ -28,6 +28,25 @@ SECTIONS
 		*(EXCLUDE_FILE(obj/kern/bootstrap.o) .rodata .rodata.* .gnu.linkonce.r.*)
 	}
 
+        /* Include debugging information in kernel memory */
+    .stab : {
+        PROVIDE(__STAB_BEGIN__ = .);
+        *(.stab);
+        PROVIDE(__STAB_END__ = .);
+        BYTE(0)     /* Force the linker to allocate space
+                   for this section */
+    }
+    
+
+    .stabstr : {
+        PROVIDE(__STABSTR_BEGIN__ = .);
+        *(.stabstr);
+        PROVIDE(__STABSTR_END__ = .);
+        BYTE(0)     /* Force the linker to allocate space
+                   for this section */
+    }
+
+    
 	/* Adjust the address for the data segment to the next page */
 	. = ALIGN(0x1000);
 
@@ -41,6 +60,28 @@ SECTIONS
 	.bss : {
 		*(EXCLUDE_FILE(obj/kern/bootstrap.o) .bss)
 	}
+
+    .comment : {
+        *(.comment) 
+    }   
+    
+    .shstrtab : {
+        *(.shstrtab)
+    }
+    
+    .symtab : {
+        PROVIDE(__KSYM_BEGIN__ = .);
+        *(.symtab);
+        PROVIDE(__KSYM_END__ = .);
+        
+    }
+    
+    .strtab : {
+        PROVIDE(__KSYMSTR_BEGIN__ = .);
+        *(.strtab);
+        PROVIDE(__KSYMSTR_END__ = .);
+        
+    }
 
 	PROVIDE(end = .);
 

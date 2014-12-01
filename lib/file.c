@@ -67,6 +67,7 @@ open(const char *path, int mode)
 	// file descriptor.
 
 	// LAB 5: Your code here
+/*	cprintf("In open");
 	struct Fd *fd;
 	int r;
 
@@ -85,7 +86,35 @@ open(const char *path, int mode)
         }
         return fd2num(fd);
 
+*/
+	
+	//cprintf("In open \n");
+	int r = 0;
+	struct Fd *fd_store;
 
+	if ( strlen(path) >= MAXPATHLEN ){
+		cprintf("Path too long\n");
+		return -E_BAD_PATH;
+	}
+
+	r = fd_alloc( &fd_store );
+	if( r == -E_MAX_OPEN ){
+		cprintf("Max open");
+		//cprintf("-E_MAX_PATH\n");	
+		return r;
+	}
+	
+	//memmove( fsipcbuf.open.req_path, path, strlen());
+	strcpy( fsipcbuf.open.req_path, path );
+	fsipcbuf.open.req_omode = mode;
+	//cprintf("after open");
+	if( (r = fsipc( FSREQ_OPEN, fd_store )) < 0 ){
+		//cprintf("fsreopen inside");
+		fd_close( fd_store, 0 );
+		return r;
+	}
+	//cprintf("befor fd2num");
+	return fd2num( fd_store );
 
 //	panic ("open not implemented");
 }

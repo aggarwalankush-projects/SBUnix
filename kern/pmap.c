@@ -11,6 +11,8 @@
 #include <kern/multiboot.h>
 #include <kern/env.h>
 #include <kern/cpu.h>
+#include <kern/module.h>
+
 
 extern uint64_t pml4phys;
 #define BOOT_PAGE_TABLE_START ((uint64_t) KADDR(pml4phys))
@@ -275,7 +277,8 @@ x64_vm_init(void)
 	// LAB 3: Your code here.
 	envs = (struct Env*)boot_alloc(NENV*sizeof(struct Env));//lab 3
 	
-
+	// LKM
+	modules = (struct Module*)boot_alloc(NLKM*sizeof(struct Module));
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
 	// up the list of free physical pages. Once we've done so, all further
@@ -474,6 +477,27 @@ page_alloc(int alloc_flags)
 	{
 		return NULL;
 	}//lab2 code
+
+/*
+// Fill this function in
+	struct PageInfo *new=page_free_list;
+	static int alloc = 1;
+	if ( page_free_list) 
+	{
+		page_free_list = page_free_list->pp_link;
+	}
+	else
+	{
+		return NULL;
+	}	
+	new->pp_link = NULL;
+	if ( alloc_flags & ALLOC_ZERO )
+	{
+		memset(page2kva(new), 0, PGSIZE);
+	}
+	//cprintf("alloc = %d. alloc_addr=%x\n", alloc++, new);
+	return new;
+*/
 }
 
 //

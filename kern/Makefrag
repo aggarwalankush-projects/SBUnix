@@ -34,7 +34,8 @@ KERN_SRCFILES :=	kern/entry.S \
 		    kern/libdwarf_rw.c \
 		    kern/libdwarf_frame.c \
 			kern/libdwarf_lineno.c \
-		    kern/elf_rw.c
+		    kern/elf_rw.c \
+			kern/kernsym.c
 
 
 # Source files for LAB4
@@ -48,6 +49,9 @@ KERN_SRCFILES +=	kern/e100.c \
 			kern/e1000.c \
 			kern/pci.c \
 			kern/time.c
+
+#Source files for LKM
+KERN_SRCFILES +=    kern/module.c
 
 # Only build files if they exist.
 KERN_SRCFILES := $(wildcard $(KERN_SRCFILES))
@@ -96,11 +100,8 @@ KERN_BINFILES +=	user/testpteshare \
 			user/testpiperace2 \
 			user/primespipe \
 			user/testkbd \
-			user/testshell
-			
-# Binary files for LKM
-KERN_BINFILES += user/lkm.c \
-				user/ksyms.c
+			user/testshell \
+			user/kernsymload
 
 KERN_OBJFILES := $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES := $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))

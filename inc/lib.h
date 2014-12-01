@@ -62,6 +62,7 @@ int	sys_ipc_recv(void *rcv_pg);
 unsigned int sys_time_msec(void);
 int sys_net_e1000_transmit(char *, uint32_t);
 int sys_net_e1000_receive(char *);
+int sys_load_kernel_symbol(void *ksym, uint32_t size);
 
 // This must be inlined.  Exercise for reader: why?
 static __inline envid_t __attribute__((always_inline))
@@ -152,5 +153,11 @@ void	wait(envid_t env);
 #define	O_TRUNC		0x0200		/* truncate to zero length */
 #define	O_EXCL		0x0400		/* error if already exists */
 #define O_MKDIR		0x0800		/* create directory, not regular file */
+
+//LKM
+int sys_load_module(void *buffer, void *path);
+int sys_unload_module(void *path);
+int sys_list_module();
+int sys_call_module(void *name);
 
 #endif	// !JOS_INC_LIB_H

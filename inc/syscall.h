@@ -20,6 +20,11 @@ enum {
 	SYS_net_e1000_transmit,
 	SYS_net_e1000_receive,
 	SYS_time_msec,
+	//LKM
+	SYS_load_module,
+	SYS_unload_module,
+	SYS_list_module,
+	SYS_load_kernel_symbol,
 	NSYSCALLS
 };
 

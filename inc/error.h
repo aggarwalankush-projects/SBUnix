@@ -30,6 +30,14 @@ enum {
 	//Net error codes
 	E_TX_QUEUE_FULL = 17,
 	E_NO_PCKT = 18,
+
+	//LKM
+	E_LKM_FAIL = 19,
+	E_BAD_ELF =20,
+	NO_FREE_MODULE =21,
+	E_BAD_MODULE = 22,
+	E_BAD_SYMBOL = 23,
+
 	MAXERROR
 };
 

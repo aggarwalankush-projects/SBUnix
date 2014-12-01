@@ -1,14 +1,14 @@
-List challenge problems completed as part of the lab 1 handin, as well
-as the problem number.
-
-**************************************************************************************************************************************
-challenge 1
-**************************************************************************************************************************************
-We have embedded ANSI escape sequence in the text string to change its color. We could change both foreground and background color. 
-We tried it by displaying some text using cprintf(). 
-Eg : cprintf(“\e[37;42m Hello World \e[m”)
-The above statement will “Hello World”  with foreground color white and background color green.
-
-Refrence : http://ascii-table.com/ansi-escape-sequences.php 
-
-
+List challenge problems completed as part of the lab 1 handin, as well
+as the problem number.
+
+**************************************************************************************************************************************
+challenge 1
+**************************************************************************************************************************************
+We have embedded ANSI escape sequence in the text string to change its color. We could change both foreground and background color. 
+We tried it by displaying some text using cprintf(). 
+Eg : cprintf(“\e[37;42m Hello World \e[m”)
+The above statement will “Hello World”  with foreground color white and background color green.
+
+Refrence : http://ascii-table.com/ansi-escape-sequences.php 
+
+

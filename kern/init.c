@@ -19,6 +19,7 @@
 #include <kern/spinlock.h>
 #include <kern/time.h>
 #include <kern/pci.h>
+#include <kern/module.h>
 
 uint64_t end_debug;
 
@@ -52,6 +53,8 @@ i386_init(void)
 	// Lab 3 user environment initialization functions
 	env_init();
 	trap_init();
+	//Lab 7: LKM
+	module_init();
 
 	// Lab 4 multiprocessor initialization functions
 	mp_init();
@@ -69,13 +72,13 @@ i386_init(void)
 	lock_kernel();
 	// Starting non-boot CPUs
 	boot_aps();
-
 	// Start fs.
 	ENV_CREATE(fs_fs, ENV_TYPE_FS);
+	ENV_CREATE(user_kernsymload,ENV_TYPE_USER);
 
 #if !defined(TEST_NO_NS)
 	// Start ns.
-	ENV_CREATE(net_ns, ENV_TYPE_NS);
+	//ENV_CREATE(net_ns, ENV_TYPE_NS);
 #endif
 
 #if defined(TEST)
@@ -83,9 +86,9 @@ i386_init(void)
 	ENV_CREATE(TEST, ENV_TYPE_USER);
 #else
 	// Touch all you want.
-//	ENV_CREATE(user_icode, ENV_TYPE_USER);
+	ENV_CREATE(user_icode, ENV_TYPE_USER);
 
-        ENV_CREATE(user_spawnhello, ENV_TYPE_USER);
+        //ENV_CREATE(user_spawnhello, ENV_TYPE_USER);
 
 
 #endif // TEST*

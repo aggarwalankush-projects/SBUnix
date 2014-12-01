@@ -7,18 +7,24 @@ FSOFILES := 		$(OBJDIR)/fs/ide.o \
 			$(OBJDIR)/fs/serv.o \
 			$(OBJDIR)/fs/test.o \
 
-ROOTAPPS := $(OBJDIR)/user/init
+ROOTAPPS := $(OBJDIR)/user/init 
+	    
 
 FSIMGTXTFILES :=	fs/newmotd \
 			fs/motd \
-			fs/robig
+			fs/robig \
+			fs/hellomod.o \
+			fs/kernel.sym
+			
 
 FSIMGTXTFILES :=	$(FSIMGTXTFILES) \
 			fs/index.html
 
 USERAPPS :=		$(USERAPPS) \
+			$(OBJDIR)/module/hellomod.o \
 			$(OBJDIR)/user/cat \
 			$(OBJDIR)/user/echo \
+			$(OBJDIR)/user/init \
 			$(OBJDIR)/user/ls \
 			$(OBJDIR)/user/lsfd \
 			$(OBJDIR)/user/num \
@@ -32,13 +38,21 @@ USERAPPS :=		$(USERAPPS) \
 			$(OBJDIR)/user/testpteshare \
 			$(OBJDIR)/user/testshell \
 			$(OBJDIR)/user/hello \
+			$(OBJDIR)/user/insmod \
+			$(OBJDIR)/user/rmmod \
+			$(OBJDIR)/user/lsmod \
+			$(OBJDIR)/user/hellomodv1.o \
+			$(OBJDIR)/user/hellomodv2.o \
+			$(OBJDIR)/user/hellomod.o 
+					
+			
 
+			
 FSIMGTXTFILES :=	$(FSIMGTXTFILES) \
 			fs/lorem \
 			fs/script \
 			fs/testshell.key \
-			fs/testshell.sh
-
+			fs/testshell.sh 		
 
 FSIMGFILES := $(FSIMGTXTFILES) $(USERAPPS) $(ROOTAPPS)
 

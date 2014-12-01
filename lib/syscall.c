@@ -132,3 +132,24 @@ sys_net_e1000_receive(char *packet)
 {
 	return syscall(SYS_net_e1000_receive, 0, (uint64_t)packet, 0, 0, 0, 0);
 }
+int
+sys_load_module(void *buffer, void *path){
+	return (int) syscall(SYS_load_module, 1, (uint64_t)buffer, (uint64_t)path, 0, 0, 0);
+}
+
+int
+sys_unload_module(void *path){
+	return (int) syscall(SYS_unload_module, 1, (uint64_t)path, 0, 0, 0, 0);
+}
+
+int
+sys_list_module(){
+	return (int) syscall(SYS_list_module, 1, 0, 0, 0, 0, 0);
+}
+
+
+int sys_load_kernel_symbol(void *ksym, uint32_t size)
+{
+    return syscall(SYS_load_kernel_symbol, 1, (uint64_t)ksym, size,0,  0,0);
+}
+

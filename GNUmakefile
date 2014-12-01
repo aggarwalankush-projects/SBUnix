@@ -141,7 +141,7 @@ include lib/Makefrag
 include user/Makefrag
 include fs/Makefrag
 include net/Makefrag
-
+include module/Makefrag
 
 CPUS ?= 1
 

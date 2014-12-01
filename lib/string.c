@@ -306,3 +306,84 @@ char * strstr(const char *in, const char *str)
     return (char *) (in - 1);
 }
 
+int64_t
+strtolForInt(const char *s, char **endptr, int base)
+{
+	int neg = 0;
+	int64_t val = 0;
+
+	// gobble initial whitespace
+	while (*s == ' ' || *s == '\t')
+		s++;
+
+	// plus/minus sign
+	if (*s == '+')
+		s++;
+	else if (*s == '-')
+		s++, neg = 1;
+
+	// hex or octal base prefix
+	if ((base == 0 || base == 16) && (s[0] == '0' && s[1] == 'x'))
+		s += 2, base = 16;
+	else if (base == 0 && s[0] == '0')
+		s++, base = 8;
+	else if (base == 0)
+		base = 10;
+
+	// digits
+	while (1) {
+		int dig;
+
+		if (*s >= '0' && *s <= '9')
+			dig = *s - '0';
+		else if (*s >= 'a' && *s <= 'z')
+			dig = *s - 'a' + 10;
+		else if (*s >= 'A' && *s <= 'Z')
+			dig = *s - 'A' + 10;
+		else
+			break;
+		if (dig >= base)
+			break;
+		s++, val = (val * base) + dig;
+		// we don't properly detect overflow!
+	}
+
+	if (endptr)
+		*endptr = (char *) s;
+	return (neg ? -val : val);
+}
+
+
+void split(char *line, char *symbol_name, unsigned long long *symbol_value)
+{
+    int i = 0;
+    char hex[16];
+    while ( *line != ' ')
+    {
+        hex[i++] = *line++;
+    }
+    hex[i]=0;
+    *symbol_value = strtolForInt(hex, 0, 16);
+    line+=3;
+    strncpy(symbol_name, line, 64);
+    
+}
+bool read_one_line(char *line, char **table )
+{
+    if ( **table == '\0' )
+    {
+        return false;
+    }
+    while ( **table != '\n' && **table != 0)
+    {
+        *line++ = **table;
+        (*table)++;
+    }
+    if (**table == '\n')
+    {
+        (*table)++;
+    }
+    *line = 0;
+    return true;
+}
+

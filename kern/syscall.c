@@ -14,6 +14,9 @@
 #include <kern/time.h>
 #include <kern/e1000.h>
 
+#include <kern/module.h>
+#include <kern/kernsym.h>
+
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
 // Destroys the environment on memory errors.
@@ -486,6 +489,56 @@ sys_net_e1000_receive(char *packet)
 }
 
 
+static int
+sys_load_module(char *buffer, char *path){
+//	cprintf("in sys_load_module ..\n");
+	// call the load module in here.
+	load_module(buffer, path);
+	return 0;
+}
+
+static int
+sys_unload_module(char *path){
+//	cprintf("in sys_unload_module..\n");
+	unload_module(path);
+	return 0;
+}
+
+static int
+sys_list_module(){
+//	cprintf("in sys_list_module.. \n");
+	list_module();
+	return 0;
+}
+
+static int
+sys_load_kernel_symbol(void *ksym,uint32_t size)
+{
+    char *user_ksym = ksym;
+    char line[90];
+    char symbol_name[64];
+    uint64_t symbol_value=0;
+    char *sym = NULL;
+    if ( user_ksym == NULL )
+    {
+        return -E_INVAL;
+    }
+    if ( !kern_ksym )
+    {
+        kern_ksym = MODULE_DATA_LOAD_START + MAX_MODULES*PGSIZE;
+        memmove((void*)kern_ksym, user_ksym, size);
+    }
+    *((uint8_t*)kern_ksym + size ) = 0;
+    sym = (char*)kern_ksym;
+    
+    while ( read_one_line(line, &sym))
+    {
+        split(line, symbol_name, &symbol_value);
+        set_kern_sym(kernel_table, symbol_name, symbol_value);
+    }
+    return 0;
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int64_t
 syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5)
@@ -533,7 +586,20 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 	else if(syscallno == SYS_net_e1000_transmit)
 		return sys_net_e1000_transmit((char *)a1, (uint32_t)a2); 	 
 	else if(syscallno == SYS_net_e1000_receive)
-		return sys_net_e1000_receive((char *)a1);	       
+		return sys_net_e1000_receive((char *)a1);
+	else if(syscallno == SYS_load_module){
+		return sys_load_module((void *)a1, (void *)a2);
+		
+	}
+	else if(syscallno == SYS_unload_module){
+		return sys_unload_module((void *)a1);		
+	}
+	else if(syscallno == SYS_list_module){
+		return sys_list_module((void *)a1);
+	}
+	else if(syscallno == SYS_load_kernel_symbol){
+                return sys_load_kernel_symbol((void*)a1,(uint32_t)a2);
+	}
 	else
 	{
 		cprintf("\nInvalid syscall no.: %d \n", syscallno);
